@@ -2,47 +2,62 @@ name: Update README cards
 
 on:
   schedule:
-    - cron: "0 0 * * *" # Runs once daily at midnight
-  workflow_dispatch:
+    - cron: "0 0 * * *"          # 每天 UTC 00:00 执行（北京时间早上8点或9点）
+  workflow_dispatch:             # 允许手动触发
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     permissions:
-      contents: write
+      contents: write            # 必须有写入权限
 
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}   # 通常用这个就够（公开仓库）
 
-      - name: Generate stats card
-        uses: readme-tools/github-readme-stats-action@v1
+      # ─── 生成 Stats 卡片 ───
+      - name: Generate Stats Card
+        uses: stats-organization/github-readme-stats-action@v1
         with:
           card: stats
-          options: username=${{ github.repository_owner }}&show_icons=true
-          path: profile/stats.svg
-          token: ${{ secrets.GITHUB_TOKEN }}
+          options: |
+            username=${{ github.repository_owner }}
+            show_icons=true
+            theme=radical           # 可换：tokyonight, dracula, onedark, synthwave, etc.
+            hide=prs,issues         # 可选：隐藏不想显示的项目
+            hide_title=true
+            card_width=500
 
-      - name: Generate top languages card
-        uses: readme-tools/github-readme-stats-action@v1
+      # ─── 生成 Top Languages 卡片 ───
+      - name: Generate Top Languages Card
+        uses: stats-organization/github-readme-stats-action@v1
         with:
           card: top-langs
-          options: username=${{ github.repository_owner }}&layout=compact&langs_count=6
-          path: profile/top-langs.svg
-          token: ${{ secrets.GITHUB_TOKEN }}
+          options: |
+            username=${{ github.repository_owner }}
+            show_icons=true
+            theme=radical
+            layout=compact
+            langs_count=8
+            hide=html,css,tex,jupyter%20notebook  # 可隐藏不想显示的语言
 
-      - name: Generate pin card
-        uses: readme-tools/github-readme-stats-action@v1
-        with:
-          card: pin
-          options: username=readme-tools&repo=github-readme-stats
-          path: profile/pin-readme-tools-github-readme-stats.svg
-          token: ${{ secrets.GITHUB_TOKEN }}
+      # ─── （可选）生成 Pinned 项目卡片 ───
+      # - name: Generate Pinned Card
+      #   uses: stats-organization/github-readme-stats-action@v1
+      #   with:
+      #     card: pin
+      #     options: |
+      #       username=${{ github.repository_owner }}
+      #       repo=github-readme-stats,gitprofile,...
+      #       theme=radical
 
-      - name: Commit cards
+      # ─── 提交生成的 SVG 文件 ───
+      - name: Commit changed files
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add profile/*.svg
-          git commit -m "Update README cards" || exit 0
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: update stats cards [skip ci]" || echo "No changes to commit"
           git push
